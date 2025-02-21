@@ -17,6 +17,7 @@ export default function TrueMFA() {
   const [issuer, setIssuer] = useState('');
   const [secret, setSecret] = useState('');
   const [timeLeft, setTimeLeft] = useState(30);
+  const [user, setUser] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -25,6 +26,7 @@ export default function TrueMFA() {
       if (!user) {
         window.location.href = "/auth";
       } else {
+        setUser(user);
         fetchTokens();
       }
     };
@@ -32,6 +34,7 @@ export default function TrueMFA() {
   }, []);
 
   useEffect(() => {
+    if (!user) return;
     const updateTOTP = () => {
       const localTime = Math.floor(Date.now() / 1000);
       const timeRemaining = 30 - (localTime % 30);
@@ -52,7 +55,7 @@ export default function TrueMFA() {
     updateTOTP();
     const interval = setInterval(updateTOTP, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [user]);
 
   const fetchTokens = async () => {
     let { data, error } = await supabase.from('totp_tokens').select('*');
@@ -87,6 +90,8 @@ export default function TrueMFA() {
       console.error("Failed to copy: ", err);
     });
   };
+
+  if (!user) return <p>Loading...</p>;
 
   return (
     <div style={{ padding: '20px', maxWidth: '600px', margin: 'auto', fontFamily: 'Arial, sans-serif' }}>
