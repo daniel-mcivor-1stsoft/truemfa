@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { authenticator } from 'otplib';
-import { encode as base32Encode } from 'hi-base32';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -25,27 +24,21 @@ export default function TrueMFA() {
   }, []);
 
   useEffect(() => {
-    const updateTOTP = async () => {
-      try {
-        const response = await fetch("https://timeapi.io/api/Time/current/zone?timeZone=UTC");
-        const data = await response.json();
-        const serverTime = Math.floor(new Date(data.dateTime).getTime() / 1000);
-        const timeRemaining = 30 - (serverTime % 30);
+    const updateTOTP = () => {
+      // Use the local system time
+      const localTime = Math.floor(Date.now() / 1000);
+      const timeRemaining = 30 - (localTime % 30);
+      setTimeLeft(timeRemaining);
 
-        setTimeLeft(timeRemaining);
-
-        if (timeRemaining === 30) {
-          setTokens((prevTokens) => prevTokens.map(token => ({
-            ...token,
-            currentTOTP: authenticator.generate(token.secret, {
-              algorithm: "SHA-1",
-              step: 30,
-              timestamp: serverTime * 1000
-            })
-          })));
-        }
-      } catch (error) {
-        console.error("Failed to fetch time:", error);
+      if (timeRemaining === 30) {
+        setTokens((prevTokens) => prevTokens.map(token => ({
+          ...token,
+          currentTOTP: authenticator.generate(token.secret, {
+            algorithm: "SHA-1",
+            step: 30,
+            timestamp: localTime * 1000
+          })
+        })));
       }
     };
 
@@ -59,7 +52,7 @@ export default function TrueMFA() {
       alert('Please enter all fields');
       return;
     }
-    const formattedSecret = base32Encode(secret).replace(/=+$/, '').toUpperCase();
+    const formattedSecret = secret.replace(/\s+/g, '').toUpperCase();
     const newToken = { account, issuer, secret: formattedSecret };
     let { data, error } = await supabase.from('totp_tokens').insert(newToken).select();
     if (error) console.error(error);
