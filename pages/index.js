@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { authenticator } from 'otplib';
+import { Button, Card, CardContent, Input, Typography } from "@mui/material";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -25,7 +26,6 @@ export default function TrueMFA() {
 
   useEffect(() => {
     const updateTOTP = () => {
-      // Use the local system time
       const localTime = Math.floor(Date.now() / 1000);
       const timeRemaining = 30 - (localTime % 30);
       setTimeLeft(timeRemaining);
@@ -72,50 +72,46 @@ export default function TrueMFA() {
   };
 
   return (
-    <div style={{ padding: '20px', maxWidth: '600px', margin: 'auto' }}>
-      <h1>TrueMFA</h1>
-      <input
-        type="text"
+    <div style={{ padding: '20px', maxWidth: '600px', margin: 'auto', fontFamily: 'Arial, sans-serif' }}>
+      <Typography variant="h4" gutterBottom>TrueMFA</Typography>
+      <Input
         placeholder="Issuer (Website Name)"
         value={issuer}
         onChange={(e) => setIssuer(e.target.value)}
-        style={{ padding: '10px', width: '100%', marginBottom: '10px' }}
+        fullWidth
+        style={{ marginBottom: '10px' }}
       />
-      <input
-        type="text"
+      <Input
         placeholder="Account Name (Email/Username)"
         value={account}
         onChange={(e) => setAccount(e.target.value)}
-        style={{ padding: '10px', width: '100%', marginBottom: '10px' }}
+        fullWidth
+        style={{ marginBottom: '10px' }}
       />
-      <input
-        type="text"
+      <Input
         placeholder="TOTP Secret"
         value={secret}
         onChange={(e) => setSecret(e.target.value)}
-        style={{ padding: '10px', width: '100%', marginBottom: '10px' }}
+        fullWidth
+        style={{ marginBottom: '10px' }}
       />
-      <button
-        onClick={handleAddToken}
-        style={{ padding: '10px', width: '100%', backgroundColor: '#007bff', color: 'white', border: 'none', cursor: 'pointer', marginTop: '10px' }}
-      >
+      <Button variant="contained" color="primary" fullWidth onClick={handleAddToken}>
         Save TOTP Code
-      </button>
+      </Button>
       <div style={{ marginTop: '20px' }}>
-        <h2>Saved TOTP Tokens</h2>
-        <p>Next refresh in: {timeLeft}s</p>
+        <Typography variant="h6">Saved TOTP Tokens</Typography>
+        <Typography variant="body2">Next refresh in: {timeLeft}s</Typography>
         {tokens.map((token) => (
-          <div key={token.id} style={{ padding: '10px', border: '1px solid #ddd', marginTop: '10px' }}>
-            <p><strong>Issuer:</strong> {token.issuer}</p>
-            <p><strong>Account:</strong> {token.account}</p>
-            <p><strong>Current TOTP Code:</strong> {token.currentTOTP || 'Loading...'}</p>
-            <button
-              onClick={() => handleDeleteToken(token.id)}
-              style={{ padding: '5px', backgroundColor: 'red', color: 'white', border: 'none', cursor: 'pointer', marginTop: '5px' }}
-            >
-              Delete Token
-            </button>
-          </div>
+          <Card key={token.id} style={{ marginTop: '10px', padding: '10px' }}>
+            <CardContent>
+              <Typography variant="subtitle1"><strong>Issuer:</strong> {token.issuer}</Typography>
+              <Typography variant="subtitle1"><strong>Account:</strong> {token.account}</Typography>
+              <Typography variant="h6" color="primary"><strong>Current TOTP Code:</strong> {token.currentTOTP || 'Loading...'}</Typography>
+              <Button variant="outlined" color="secondary" fullWidth onClick={() => handleDeleteToken(token.id)}>
+                Delete Token
+              </Button>
+            </CardContent>
+          </Card>
         ))}
       </div>
     </div>
