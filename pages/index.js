@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { authenticator } from 'otplib';
-import { base32 } from 'hi-base32';
+import { encode as base32Encode } from 'hi-base32';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -59,7 +59,7 @@ export default function TrueMFA() {
       alert('Please enter all fields');
       return;
     }
-    const formattedSecret = base32.encode(secret).replace(/=+$/, '').toUpperCase();
+    const formattedSecret = base32Encode(secret).replace(/=+$/, '').toUpperCase();
     const newToken = { account, issuer, secret: formattedSecret };
     let { data, error } = await supabase.from('totp_tokens').insert(newToken).select();
     if (error) console.error(error);
