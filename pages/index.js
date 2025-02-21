@@ -17,7 +17,7 @@ export default function TrueMFA() {
     const fetchTokens = async () => {
       let { data, error } = await supabase.from('totp_tokens').select('*');
       if (error) console.error(error);
-      else setTokens(data);
+      else setTokens(data.map(token => ({ ...token, timeLeft: 30 - (Math.floor(Date.now() / 1000) % 30) })));
     };
     fetchTokens();
   }, []);
@@ -35,12 +35,21 @@ export default function TrueMFA() {
       return;
     }
     const newToken = { account, issuer, secret };
-    let { error } = await supabase.from('totp_tokens').insert(newToken);
+    let { data, error } = await supabase.from('totp_tokens').insert(newToken).select();
     if (error) console.error(error);
-    else setTokens([...tokens, { ...newToken, timeLeft: 30 }]);
+    else setTokens([...tokens, { ...data[0], timeLeft: 30 }]);
     setAccount('');
     setIssuer('');
     setSecret(authenticator.generateSecret());
+  };
+
+  const handleDeleteToken = async (id) => {
+    let { error } = await supabase.from('totp_tokens').delete().eq('id', id);
+    if (error) {
+      console.error('Error deleting token:', error);
+    } else {
+      setTokens(tokens.filter(token => token.id !== id));
+    }
   };
 
   const generateTOTP = (secret) => {
@@ -79,12 +88,18 @@ export default function TrueMFA() {
       </button>
       <div style={{ marginTop: '20px' }}>
         <h2>Saved TOTP Tokens</h2>
-        {tokens.map((token, index) => (
-          <div key={index} style={{ padding: '10px', border: '1px solid #ddd', marginTop: '10px' }}>
+        {tokens.map((token) => (
+          <div key={token.id} style={{ padding: '10px', border: '1px solid #ddd', marginTop: '10px' }}>
             <p><strong>Issuer:</strong> {token.issuer}</p>
             <p><strong>Account:</strong> {token.account}</p>
             <p><strong>Current TOTP Code:</strong> {generateTOTP(token.secret)}</p>
             <p><strong>Next code refresh in:</strong> {token.timeLeft}s</p>
+            <button
+              onClick={() => handleDeleteToken(token.id)}
+              style={{ padding: '5px', backgroundColor: 'red', color: 'white', border: 'none', cursor: 'pointer', marginTop: '5px' }}
+            >
+              Delete Token
+            </button>
           </div>
         ))}
       </div>
