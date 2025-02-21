@@ -13,6 +13,7 @@ export default function TrueMFA() {
   const [account, setAccount] = useState('');
   const [issuer, setIssuer] = useState('');
   const [secret, setSecret] = useState(authenticator.generateSecret());
+  const [timeLeft, setTimeLeft] = useState(30);
 
   useEffect(() => {
     const fetchTokens = async () => {
@@ -22,6 +23,19 @@ export default function TrueMFA() {
     };
     fetchTokens();
   }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 30));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (timeLeft === 0) {
+      setTokens((prevTokens) => [...prevTokens]); // Trigger a re-render
+    }
+  }, [timeLeft]);
 
   const handleAddToken = async () => {
     if (!account || !issuer || !secret) {
@@ -74,11 +88,11 @@ export default function TrueMFA() {
       </button>
       <div style={{ marginTop: '20px' }}>
         <h2>Saved TOTP Tokens</h2>
+        <p>Next code refresh in: {timeLeft}s</p>
         {tokens.map((token, index) => (
           <div key={index} style={{ padding: '10px', border: '1px solid #ddd', marginTop: '10px' }}>
             <p><strong>Issuer:</strong> {token.issuer}</p>
             <p><strong>Account:</strong> {token.account}</p>
-            <p><strong>Secret:</strong> {token.secret}</p>
             <p><strong>Current TOTP Code:</strong> {generateTOTP(token.secret)}</p>
           </div>
         ))}
