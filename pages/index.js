@@ -4,7 +4,7 @@ import { authenticator } from 'otplib';
 import { Button, Card, CardContent, Input, Typography, IconButton } from "@mui/material";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useRouter } from "next/router";
-import { getUser } from "../lib/auth";
+import { getUser, signOut } from "../lib/auth";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -75,18 +75,9 @@ export default function TrueMFA() {
     else setTokens(data);
   };
 
-  const handleAddToken = async () => {
-    if (!account || !issuer || !secret) {
-      alert('Please enter all fields');
-      return;
-    }
-    const formattedSecret = secret.replace(/\s+/g, '').toUpperCase();
-    let { data, error } = await supabase.from('totp_tokens').insert([{ account, issuer, secret: formattedSecret }]);
-    if (error) console.error(error);
-    else fetchTokens();
-    setAccount('');
-    setIssuer('');
-    setSecret('');
+  const handleSignOut = async () => {
+    await signOut();
+    router.replace("/auth");
   };
 
   if (loading) return <p>Loading...</p>;
@@ -96,6 +87,9 @@ export default function TrueMFA() {
       <Typography variant="h4" gutterBottom>TrueMFA</Typography>
       {user && (
         <>
+          <Button variant="contained" color="secondary" fullWidth onClick={handleSignOut} style={{ marginBottom: '10px' }}>
+            Sign Out
+          </Button>
           <Input placeholder="Issuer (Website Name)" value={issuer} onChange={(e) => setIssuer(e.target.value)} fullWidth style={{ marginBottom: '10px' }} />
           <Input placeholder="Account Name (Email/Username)" value={account} onChange={(e) => setAccount(e.target.value)} fullWidth style={{ marginBottom: '10px' }} />
           <Input placeholder="TOTP Secret" value={secret} onChange={(e) => setSecret(e.target.value)} fullWidth style={{ marginBottom: '10px' }} />
