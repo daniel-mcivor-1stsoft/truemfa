@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { authenticator } from 'otplib';
+import { base32 } from 'hi-base32';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -12,31 +13,40 @@ export default function TrueMFA() {
   const [account, setAccount] = useState('');
   const [issuer, setIssuer] = useState('');
   const [secret, setSecret] = useState(authenticator.generateSecret());
+  const [timeLeft, setTimeLeft] = useState(30);
 
   useEffect(() => {
     const fetchTokens = async () => {
       let { data, error } = await supabase.from('totp_tokens').select('*');
       if (error) console.error(error);
-      else setTokens(data.map(token => ({ ...token, timeLeft: 30 - (Math.floor(Date.now() / 1000) % 30) })));
+      else setTokens(data.map(token => ({ ...token, currentTOTP: '', timeLeft: 30 })));
     };
     fetchTokens();
   }, []);
 
   useEffect(() => {
-    const interval = setInterval(async () => {
+    const updateTOTP = async () => {
       try {
         const response = await fetch("https://timeapi.io/api/Time/current/zone?timeZone=UTC");
         const data = await response.json();
         const serverTime = Math.floor(new Date(data.dateTime).getTime() / 1000);
-        setTokens((prevTokens) => prevTokens.map(token => ({
-          ...token,
-          timeLeft: 30 - (serverTime % 30),
-          currentTOTP: authenticator.generate(token.secret, { step: 30, timestamp: serverTime * 1000 })
-        })));
+        const timeRemaining = 30 - (serverTime % 30);
+
+        setTimeLeft(timeRemaining);
+
+        if (timeRemaining === 30) {
+          setTokens((prevTokens) => prevTokens.map(token => ({
+            ...token,
+            currentTOTP: authenticator.generate(token.secret, { step: 30, timestamp: serverTime * 1000 })
+          })));
+        }
       } catch (error) {
         console.error("Failed to fetch time:", error);
       }
-    }, 1000);
+    };
+
+    updateTOTP();
+    const interval = setInterval(updateTOTP, 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -45,10 +55,11 @@ export default function TrueMFA() {
       alert('Please enter all fields');
       return;
     }
-    const newToken = { account, issuer, secret };
+    const formattedSecret = base32.encode(secret).replace(/=+$/, '');
+    const newToken = { account, issuer, secret: formattedSecret };
     let { data, error } = await supabase.from('totp_tokens').insert(newToken).select();
     if (error) console.error(error);
-    else setTokens([...tokens, { ...data[0], timeLeft: 30, currentTOTP: '' }]);
+    else setTokens([...tokens, { ...data[0], currentTOTP: '', timeLeft: 30 }]);
     setAccount('');
     setIssuer('');
     setSecret(authenticator.generateSecret());
@@ -95,12 +106,12 @@ export default function TrueMFA() {
       </button>
       <div style={{ marginTop: '20px' }}>
         <h2>Saved TOTP Tokens</h2>
+        <p>Next refresh in: {timeLeft}s</p>
         {tokens.map((token) => (
           <div key={token.id} style={{ padding: '10px', border: '1px solid #ddd', marginTop: '10px' }}>
             <p><strong>Issuer:</strong> {token.issuer}</p>
             <p><strong>Account:</strong> {token.account}</p>
             <p><strong>Current TOTP Code:</strong> {token.currentTOTP || 'Loading...'}</p>
-            <p><strong>Next code refresh in:</strong> {token.timeLeft}s</p>
             <button
               onClick={() => handleDeleteToken(token.id)}
               style={{ padding: '5px', backgroundColor: 'red', color: 'white', border: 'none', cursor: 'pointer', marginTop: '5px' }}
