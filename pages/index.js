@@ -25,9 +25,9 @@ export default function TrueMFA() {
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        const response = await fetch("https://worldtimeapi.org/api/timezone/Etc/UTC");
+        const response = await fetch("https://timeapi.io/api/Time/current/zone?timeZone=UTC");
         const data = await response.json();
-        const serverTime = Math.floor(new Date(data.utc_datetime).getTime() / 1000);
+        const serverTime = Math.floor(new Date(data.dateTime).getTime() / 1000);
         setTokens((prevTokens) => prevTokens.map(token => ({
           ...token,
           timeLeft: 30 - (serverTime % 30),
