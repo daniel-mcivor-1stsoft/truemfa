@@ -23,8 +23,19 @@ export default function TrueMFA() {
   }, []);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setTokens((prevTokens) => prevTokens.map(token => ({ ...token, timeLeft: 30 - (Math.floor(Date.now() / 1000) % 30) })));
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch("https://worldtimeapi.org/api/timezone/Etc/UTC");
+        const data = await response.json();
+        const serverTime = Math.floor(new Date(data.utc_datetime).getTime() / 1000);
+        setTokens((prevTokens) => prevTokens.map(token => ({
+          ...token,
+          timeLeft: 30 - (serverTime % 30),
+          currentTOTP: authenticator.generate(token.secret, { step: 30, timestamp: serverTime * 1000 })
+        })));
+      } catch (error) {
+        console.error("Failed to fetch time:", error);
+      }
     }, 1000);
     return () => clearInterval(interval);
   }, []);
@@ -37,7 +48,7 @@ export default function TrueMFA() {
     const newToken = { account, issuer, secret };
     let { data, error } = await supabase.from('totp_tokens').insert(newToken).select();
     if (error) console.error(error);
-    else setTokens([...tokens, { ...data[0], timeLeft: 30 }]);
+    else setTokens([...tokens, { ...data[0], timeLeft: 30, currentTOTP: '' }]);
     setAccount('');
     setIssuer('');
     setSecret(authenticator.generateSecret());
@@ -50,10 +61,6 @@ export default function TrueMFA() {
     } else {
       setTokens(tokens.filter(token => token.id !== id));
     }
-  };
-
-  const generateTOTP = (secret) => {
-    return authenticator.generate(secret);
   };
 
   return (
@@ -92,7 +99,7 @@ export default function TrueMFA() {
           <div key={token.id} style={{ padding: '10px', border: '1px solid #ddd', marginTop: '10px' }}>
             <p><strong>Issuer:</strong> {token.issuer}</p>
             <p><strong>Account:</strong> {token.account}</p>
-            <p><strong>Current TOTP Code:</strong> {generateTOTP(token.secret)}</p>
+            <p><strong>Current TOTP Code:</strong> {token.currentTOTP || 'Loading...'}</p>
             <p><strong>Next code refresh in:</strong> {token.timeLeft}s</p>
             <button
               onClick={() => handleDeleteToken(token.id)}
