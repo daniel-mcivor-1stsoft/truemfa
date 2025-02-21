@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { authenticator } from 'otplib';
-import { Button, Card, CardContent, Input, Typography } from "@mui/material";
+import { Button, Card, CardContent, Input, Typography, IconButton } from "@mui/material";
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -12,14 +13,22 @@ export default function TrueMFA() {
   const [tokens, setTokens] = useState([]);
   const [account, setAccount] = useState('');
   const [issuer, setIssuer] = useState('');
-  const [secret, setSecret] = useState(authenticator.generateSecret());
+  const [secret, setSecret] = useState('');
   const [timeLeft, setTimeLeft] = useState(30);
 
   useEffect(() => {
     const fetchTokens = async () => {
       let { data, error } = await supabase.from('totp_tokens').select('*');
       if (error) console.error(error);
-      else setTokens(data.map(token => ({ ...token, currentTOTP: '', timeLeft: 30 })));
+      else setTokens(data.map(token => ({
+        ...token,
+        currentTOTP: authenticator.generate(token.secret, {
+          algorithm: "SHA-1",
+          step: 30,
+          timestamp: Math.floor(Date.now() / 1000) * 1000
+        }),
+        timeLeft: 30
+      })));
     };
     fetchTokens();
   }, []);
@@ -56,10 +65,20 @@ export default function TrueMFA() {
     const newToken = { account, issuer, secret: formattedSecret };
     let { data, error } = await supabase.from('totp_tokens').insert(newToken).select();
     if (error) console.error(error);
-    else setTokens([...tokens, { ...data[0], currentTOTP: '', timeLeft: 30 }]);
+    else {
+      const savedToken = { ...data[0],
+        currentTOTP: authenticator.generate(data[0].secret, {
+          algorithm: "SHA-1",
+          step: 30,
+          timestamp: Math.floor(Date.now() / 1000) * 1000
+        }),
+        timeLeft: 30
+      };
+      setTokens([...tokens, savedToken]);
+    }
     setAccount('');
     setIssuer('');
-    setSecret(authenticator.generateSecret());
+    setSecret('');
   };
 
   const handleDeleteToken = async (id) => {
@@ -69,6 +88,14 @@ export default function TrueMFA() {
     } else {
       setTokens(tokens.filter(token => token.id !== id));
     }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text).then(() => {
+      alert("Copied to clipboard!");
+    }).catch(err => {
+      console.error("Failed to copy: ", err);
+    });
   };
 
   return (
@@ -106,7 +133,12 @@ export default function TrueMFA() {
             <CardContent>
               <Typography variant="subtitle1"><strong>Issuer:</strong> {token.issuer}</Typography>
               <Typography variant="subtitle1"><strong>Account:</strong> {token.account}</Typography>
-              <Typography variant="h6" color="primary"><strong>Current TOTP Code:</strong> {token.currentTOTP || 'Loading...'}</Typography>
+              <Typography variant="h6" color="primary">
+                <strong>Current TOTP Code:</strong> {token.currentTOTP || 'Loading...'}
+                <IconButton onClick={() => copyToClipboard(token.currentTOTP)}>
+                  <ContentCopyIcon />
+                </IconButton>
+              </Typography>
               <Button variant="outlined" color="secondary" fullWidth onClick={() => handleDeleteToken(token.id)}>
                 Delete Token
               </Button>
