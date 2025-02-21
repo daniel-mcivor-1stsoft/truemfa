@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { authenticator } from 'otplib';
-import { QRCodeSVG } from 'qrcode.react';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -13,7 +12,6 @@ export default function TrueMFA() {
   const [account, setAccount] = useState('');
   const [issuer, setIssuer] = useState('');
   const [secret, setSecret] = useState(authenticator.generateSecret());
-  const [timeLeft, setTimeLeft] = useState(30);
 
   useEffect(() => {
     const fetchTokens = async () => {
@@ -26,16 +24,10 @@ export default function TrueMFA() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 30));
+      setTokens((prevTokens) => prevTokens.map(token => ({ ...token, timeLeft: 30 - (Math.floor(Date.now() / 1000) % 30) })));
     }, 1000);
     return () => clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    if (timeLeft === 0) {
-      setTokens((prevTokens) => [...prevTokens]); // Trigger a re-render
-    }
-  }, [timeLeft]);
 
   const handleAddToken = async () => {
     if (!account || !issuer || !secret) {
@@ -45,7 +37,7 @@ export default function TrueMFA() {
     const newToken = { account, issuer, secret };
     let { error } = await supabase.from('totp_tokens').insert(newToken);
     if (error) console.error(error);
-    else setTokens([...tokens, newToken]);
+    else setTokens([...tokens, { ...newToken, timeLeft: 30 }]);
     setAccount('');
     setIssuer('');
     setSecret(authenticator.generateSecret());
@@ -79,7 +71,6 @@ export default function TrueMFA() {
         onChange={(e) => setSecret(e.target.value)}
         style={{ padding: '10px', width: '100%', marginBottom: '10px' }}
       />
-      <QRCodeSVG value={authenticator.keyuri(account, issuer, secret)} />
       <button
         onClick={handleAddToken}
         style={{ padding: '10px', width: '100%', backgroundColor: '#007bff', color: 'white', border: 'none', cursor: 'pointer', marginTop: '10px' }}
@@ -88,12 +79,12 @@ export default function TrueMFA() {
       </button>
       <div style={{ marginTop: '20px' }}>
         <h2>Saved TOTP Tokens</h2>
-        <p>Next code refresh in: {timeLeft}s</p>
         {tokens.map((token, index) => (
           <div key={index} style={{ padding: '10px', border: '1px solid #ddd', marginTop: '10px' }}>
             <p><strong>Issuer:</strong> {token.issuer}</p>
             <p><strong>Account:</strong> {token.account}</p>
             <p><strong>Current TOTP Code:</strong> {generateTOTP(token.secret)}</p>
+            <p><strong>Next code refresh in:</strong> {token.timeLeft}s</p>
           </div>
         ))}
       </div>
