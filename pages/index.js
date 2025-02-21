@@ -75,24 +75,9 @@ export default function TrueMFA() {
     else setTokens(data);
   };
 
-  const handleAddToken = async () => {
-    if (!account || !issuer || !secret) {
-      alert('Please enter all fields');
-      return;
-    }
-    const formattedSecret = secret.replace(/\s+/g, '').toUpperCase();
-    let { data, error } = await supabase.from('totp_tokens').insert([{ account, issuer, secret: formattedSecret }]);
-    if (error) console.error(error);
-    else fetchTokens();
-    setAccount('');
-    setIssuer('');
-    setSecret('');
-  };
-
-  const handleDeleteToken = async (id) => {
-    let { error } = await supabase.from('totp_tokens').delete().eq('id', id);
-    if (error) console.error(error);
-    else setTokens(tokens.filter(token => token.id !== id));
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.replace("/auth");
   };
 
   if (loading) return <p>Loading...</p>;
@@ -100,7 +85,7 @@ export default function TrueMFA() {
   return (
     <div style={{ padding: '20px', maxWidth: '600px', margin: 'auto', fontFamily: 'Arial, sans-serif' }}>
       <Typography variant="h4" gutterBottom>TrueMFA</Typography>
-      <Button variant="contained" color="secondary" fullWidth onClick={signOut} style={{ marginBottom: '10px' }}>
+      <Button variant="contained" color="secondary" fullWidth onClick={handleSignOut} style={{ marginBottom: '10px' }}>
         Sign Out
       </Button>
       <Input placeholder="Issuer (Website Name)" value={issuer} onChange={(e) => setIssuer(e.target.value)} fullWidth style={{ marginBottom: '10px' }} />
