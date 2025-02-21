@@ -37,7 +37,11 @@ export default function TrueMFA() {
         if (timeRemaining === 30) {
           setTokens((prevTokens) => prevTokens.map(token => ({
             ...token,
-            currentTOTP: authenticator.generate(token.secret, { step: 30, timestamp: serverTime * 1000 })
+            currentTOTP: authenticator.generate(token.secret, {
+              algorithm: "SHA-1",
+              step: 30,
+              timestamp: serverTime * 1000
+            })
           })));
         }
       } catch (error) {
@@ -55,7 +59,7 @@ export default function TrueMFA() {
       alert('Please enter all fields');
       return;
     }
-    const formattedSecret = base32.encode(secret).replace(/=+$/, '');
+    const formattedSecret = base32.encode(secret).replace(/=+$/, '').toUpperCase();
     const newToken = { account, issuer, secret: formattedSecret };
     let { data, error } = await supabase.from('totp_tokens').insert(newToken).select();
     if (error) console.error(error);
