@@ -11,7 +11,7 @@ export default function Dashboard() {
     getUser().then((user) => {
       if (!user) router.push("/auth"); // Redirect to login if not authenticated
       setUser(user);
-    });
+    }).catch(() => router.push("/auth"));
   }, []);
 
   if (!user) return <p>Loading...</p>;
