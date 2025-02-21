@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { authenticator } from 'otplib';
 import { QRCodeSVG } from 'qrcode.react';
 
 const supabase = createClient(
@@ -11,7 +12,7 @@ export default function TrueMFA() {
   const [tokens, setTokens] = useState([]);
   const [account, setAccount] = useState('');
   const [issuer, setIssuer] = useState('');
-  const [secret, setSecret] = useState('');
+  const [secret, setSecret] = useState(authenticator.generateSecret());
 
   useEffect(() => {
     const fetchTokens = async () => {
@@ -33,7 +34,11 @@ export default function TrueMFA() {
     else setTokens([...tokens, newToken]);
     setAccount('');
     setIssuer('');
-    setSecret('');
+    setSecret(authenticator.generateSecret());
+  };
+
+  const generateTOTP = (secret) => {
+    return authenticator.generate(secret);
   };
 
   return (
@@ -60,9 +65,10 @@ export default function TrueMFA() {
         onChange={(e) => setSecret(e.target.value)}
         style={{ padding: '10px', width: '100%', marginBottom: '10px' }}
       />
+      <QRCodeSVG value={authenticator.keyuri(account, issuer, secret)} />
       <button
         onClick={handleAddToken}
-        style={{ padding: '10px', width: '100%', backgroundColor: '#007bff', color: 'white', border: 'none', cursor: 'pointer' }}
+        style={{ padding: '10px', width: '100%', backgroundColor: '#007bff', color: 'white', border: 'none', cursor: 'pointer', marginTop: '10px' }}
       >
         Save TOTP Code
       </button>
@@ -73,6 +79,7 @@ export default function TrueMFA() {
             <p><strong>Issuer:</strong> {token.issuer}</p>
             <p><strong>Account:</strong> {token.account}</p>
             <p><strong>Secret:</strong> {token.secret}</p>
+            <p><strong>Current TOTP Code:</strong> {generateTOTP(token.secret)}</p>
           </div>
         ))}
       </div>
