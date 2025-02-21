@@ -32,6 +32,7 @@ export default function TrueMFA() {
           }
         } else {
           setUser(user);
+          setLoading(false);
           fetchTokens();
         }
       } catch (error) {
