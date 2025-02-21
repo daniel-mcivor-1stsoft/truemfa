@@ -26,13 +26,13 @@ export default function TrueMFA() {
       try {
         const user = await getUser();
         if (!user) {
-          window.location.href = "/auth";
+          window.location.href = "/";
         } else {
           setUser(user);
           fetchTokens();
         }
       } catch (error) {
-        window.location.href = "/auth";
+        window.location.href = "/";
       } finally {
         setLoading(false);
       }
