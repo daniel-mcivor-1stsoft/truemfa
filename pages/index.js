@@ -4,7 +4,7 @@ import { authenticator } from 'otplib';
 import { Button, Card, CardContent, Input, Typography, IconButton } from "@mui/material";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useRouter } from "next/router";
-import { getUser, signOut } from "../lib/auth";
+import { getUser } from "../lib/auth";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -76,8 +76,13 @@ export default function TrueMFA() {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.replace("/auth");
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      router.replace("/auth");
+    } catch (err) {
+      console.error("Sign out error:", err);
+    }
   };
 
   if (loading) return <p>Loading...</p>;
