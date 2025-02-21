@@ -75,6 +75,20 @@ export default function TrueMFA() {
     else setTokens(data);
   };
 
+  const handleAddToken = async () => {
+    if (!account || !issuer || !secret) {
+      alert('Please enter all fields');
+      return;
+    }
+    const formattedSecret = secret.replace(/\s+/g, '').toUpperCase();
+    let { data, error } = await supabase.from('totp_tokens').insert([{ account, issuer, secret: formattedSecret }]);
+    if (error) console.error(error);
+    else fetchTokens();
+    setAccount('');
+    setIssuer('');
+    setSecret('');
+  };
+
   if (loading) return <p>Loading...</p>;
 
   return (
