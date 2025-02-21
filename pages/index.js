@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Button, Input, Card, CardContent } from '@/components/ui';
 import { QRCodeSVG } from 'qrcode.react';
 
 const supabase = createClient(
@@ -38,38 +37,43 @@ export default function TrueMFA() {
   };
 
   return (
-    <div className="p-8 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">TrueMFA</h1>
-      <Card>
-        <CardContent>
-          <Input
-            placeholder="Issuer (Website Name)"
-            value={issuer}
-            onChange={(e) => setIssuer(e.target.value)}
-          />
-          <Input
-            placeholder="Account Name (Email/Username)"
-            value={account}
-            onChange={(e) => setAccount(e.target.value)}
-          />
-          <Input
-            placeholder="TOTP Secret"
-            value={secret}
-            onChange={(e) => setSecret(e.target.value)}
-          />
-          <Button onClick={handleAddToken}>Save TOTP Code</Button>
-        </CardContent>
-      </Card>
-      <div className="mt-4">
-        <h2 className="text-xl font-bold">Saved TOTP Tokens</h2>
+    <div style={{ padding: '20px', maxWidth: '600px', margin: 'auto' }}>
+      <h1>TrueMFA</h1>
+      <input
+        type="text"
+        placeholder="Issuer (Website Name)"
+        value={issuer}
+        onChange={(e) => setIssuer(e.target.value)}
+        style={{ padding: '10px', width: '100%', marginBottom: '10px' }}
+      />
+      <input
+        type="text"
+        placeholder="Account Name (Email/Username)"
+        value={account}
+        onChange={(e) => setAccount(e.target.value)}
+        style={{ padding: '10px', width: '100%', marginBottom: '10px' }}
+      />
+      <input
+        type="text"
+        placeholder="TOTP Secret"
+        value={secret}
+        onChange={(e) => setSecret(e.target.value)}
+        style={{ padding: '10px', width: '100%', marginBottom: '10px' }}
+      />
+      <button
+        onClick={handleAddToken}
+        style={{ padding: '10px', width: '100%', backgroundColor: '#007bff', color: 'white', border: 'none', cursor: 'pointer' }}
+      >
+        Save TOTP Code
+      </button>
+      <div style={{ marginTop: '20px' }}>
+        <h2>Saved TOTP Tokens</h2>
         {tokens.map((token, index) => (
-          <Card key={index} className="mt-2">
-            <CardContent>
-              <p><strong>Issuer:</strong> {token.issuer}</p>
-              <p><strong>Account:</strong> {token.account}</p>
-              <p><strong>Secret:</strong> {token.secret}</p>
-            </CardContent>
-          </Card>
+          <div key={index} style={{ padding: '10px', border: '1px solid #ddd', marginTop: '10px' }}>
+            <p><strong>Issuer:</strong> {token.issuer}</p>
+            <p><strong>Account:</strong> {token.account}</p>
+            <p><strong>Secret:</strong> {token.secret}</p>
+          </div>
         ))}
       </div>
     </div>
