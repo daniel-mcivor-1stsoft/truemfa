@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
 import { signInWithEmail, signUpWithEmail, signOut, getUser } from "../lib/auth";
 import { Button, TextField, Typography, Container } from "@mui/material";
 
@@ -7,12 +8,13 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     getUser().then((user) => {
       setUser(user);
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
   }, []);
 
   const handleSignIn = async () => {
@@ -20,6 +22,7 @@ export default function AuthPage() {
       await signInWithEmail(email, password);
       const user = await getUser();
       setUser(user);
+      router.push("/dashboard"); // Redirect to dashboard after login
     } catch (error) {
       alert(error.message);
     }
