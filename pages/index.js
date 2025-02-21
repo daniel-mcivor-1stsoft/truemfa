@@ -18,16 +18,23 @@ export default function TrueMFA() {
   const [secret, setSecret] = useState('');
   const [timeLeft, setTimeLeft] = useState(30);
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     const checkAuth = async () => {
-      const user = await getUser();
-      if (!user) {
+      try {
+        const user = await getUser();
+        if (!user) {
+          window.location.href = "/auth";
+        } else {
+          setUser(user);
+          fetchTokens();
+        }
+      } catch (error) {
         window.location.href = "/auth";
-      } else {
-        setUser(user);
-        fetchTokens();
+      } finally {
+        setLoading(false);
       }
     };
     checkAuth();
@@ -91,7 +98,7 @@ export default function TrueMFA() {
     });
   };
 
-  if (!user) return <p>Loading...</p>;
+  if (loading) return <p>Loading...</p>;
 
   return (
     <div style={{ padding: '20px', maxWidth: '600px', margin: 'auto', fontFamily: 'Arial, sans-serif' }}>
