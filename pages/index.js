@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import { authenticator } from 'otplib';
 import { Button, Card, CardContent, Input, Typography, IconButton } from "@mui/material";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import { useRouter } from "next/router";
+import { getUser } from "../lib/auth";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -15,22 +17,18 @@ export default function TrueMFA() {
   const [issuer, setIssuer] = useState('');
   const [secret, setSecret] = useState('');
   const [timeLeft, setTimeLeft] = useState(30);
+  const router = useRouter();
 
   useEffect(() => {
-    const fetchTokens = async () => {
-      let { data, error } = await supabase.from('totp_tokens').select('*');
-      if (error) console.error(error);
-      else setTokens(data.map(token => ({
-        ...token,
-        currentTOTP: authenticator.generate(token.secret, {
-          algorithm: "SHA-1",
-          step: 30,
-          timestamp: Math.floor(Date.now() / 1000) * 1000
-        }),
-        timeLeft: 30
-      })));
+    const checkAuth = async () => {
+      const user = await getUser();
+      if (!user) {
+        window.location.href = "/auth";
+      } else {
+        fetchTokens();
+      }
     };
-    fetchTokens();
+    checkAuth();
   }, []);
 
   useEffect(() => {
@@ -56,26 +54,21 @@ export default function TrueMFA() {
     return () => clearInterval(interval);
   }, []);
 
+  const fetchTokens = async () => {
+    let { data, error } = await supabase.from('totp_tokens').select('*');
+    if (error) console.error(error);
+    else setTokens(data);
+  };
+
   const handleAddToken = async () => {
     if (!account || !issuer || !secret) {
       alert('Please enter all fields');
       return;
     }
     const formattedSecret = secret.replace(/\s+/g, '').toUpperCase();
-    const newToken = { account, issuer, secret: formattedSecret };
-    let { data, error } = await supabase.from('totp_tokens').insert(newToken).select();
+    let { data, error } = await supabase.from('totp_tokens').insert([{ account, issuer, secret: formattedSecret }]);
     if (error) console.error(error);
-    else {
-      const savedToken = { ...data[0],
-        currentTOTP: authenticator.generate(data[0].secret, {
-          algorithm: "SHA-1",
-          step: 30,
-          timestamp: Math.floor(Date.now() / 1000) * 1000
-        }),
-        timeLeft: 30
-      };
-      setTokens([...tokens, savedToken]);
-    }
+    else fetchTokens();
     setAccount('');
     setIssuer('');
     setSecret('');
@@ -83,11 +76,8 @@ export default function TrueMFA() {
 
   const handleDeleteToken = async (id) => {
     let { error } = await supabase.from('totp_tokens').delete().eq('id', id);
-    if (error) {
-      console.error('Error deleting token:', error);
-    } else {
-      setTokens(tokens.filter(token => token.id !== id));
-    }
+    if (error) console.error(error);
+    else setTokens(tokens.filter(token => token.id !== id));
   };
 
   const copyToClipboard = (text) => {
@@ -101,30 +91,10 @@ export default function TrueMFA() {
   return (
     <div style={{ padding: '20px', maxWidth: '600px', margin: 'auto', fontFamily: 'Arial, sans-serif' }}>
       <Typography variant="h4" gutterBottom>TrueMFA</Typography>
-      <Input
-        placeholder="Issuer (Website Name)"
-        value={issuer}
-        onChange={(e) => setIssuer(e.target.value)}
-        fullWidth
-        style={{ marginBottom: '10px' }}
-      />
-      <Input
-        placeholder="Account Name (Email/Username)"
-        value={account}
-        onChange={(e) => setAccount(e.target.value)}
-        fullWidth
-        style={{ marginBottom: '10px' }}
-      />
-      <Input
-        placeholder="TOTP Secret"
-        value={secret}
-        onChange={(e) => setSecret(e.target.value)}
-        fullWidth
-        style={{ marginBottom: '10px' }}
-      />
-      <Button variant="contained" color="primary" fullWidth onClick={handleAddToken}>
-        Save TOTP Code
-      </Button>
+      <Input placeholder="Issuer (Website Name)" value={issuer} onChange={(e) => setIssuer(e.target.value)} fullWidth style={{ marginBottom: '10px' }} />
+      <Input placeholder="Account Name (Email/Username)" value={account} onChange={(e) => setAccount(e.target.value)} fullWidth style={{ marginBottom: '10px' }} />
+      <Input placeholder="TOTP Secret" value={secret} onChange={(e) => setSecret(e.target.value)} fullWidth style={{ marginBottom: '10px' }} />
+      <Button variant="contained" color="primary" fullWidth onClick={handleAddToken}>Save TOTP Code</Button>
       <div style={{ marginTop: '20px' }}>
         <Typography variant="h6">Saved TOTP Tokens</Typography>
         <Typography variant="body2">Next refresh in: {timeLeft}s</Typography>
@@ -139,9 +109,7 @@ export default function TrueMFA() {
                   <ContentCopyIcon />
                 </IconButton>
               </Typography>
-              <Button variant="outlined" color="secondary" fullWidth onClick={() => handleDeleteToken(token.id)}>
-                Delete Token
-              </Button>
+              <Button variant="outlined" color="secondary" fullWidth onClick={() => handleDeleteToken(token.id)}>Delete Token</Button>
             </CardContent>
           </Card>
         ))}
