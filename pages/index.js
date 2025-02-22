@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { authenticator } from 'otplib';
-import { Button, Card, CardContent, Input, Typography, IconButton } from "@mui/material";
+import { Button, Card, CardContent, Input, Typography, IconButton, Container, Paper, Grid, TextField, AppBar, Toolbar, Box } from "@mui/material";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useRouter } from "next/router";
 import { getUser } from "../lib/auth";
@@ -102,20 +102,38 @@ export default function TrueMFA() {
   if (loading) return <p>Loading...</p>;
 
   return (
-    <div style={{ padding: '20px', maxWidth: '600px', margin: 'auto', fontFamily: 'Arial, sans-serif' }}>
-      <Typography variant="h4" gutterBottom>TrueMFA</Typography>
-      <Button variant="contained" color="secondary" fullWidth onClick={handleSignOut} style={{ marginBottom: '10px' }}>
-        Sign Out
-      </Button>
-      <Input placeholder="Issuer (Website Name)" value={issuer} onChange={(e) => setIssuer(e.target.value)} fullWidth style={{ marginBottom: '10px' }} />
-      <Input placeholder="Account Name (Email/Username)" value={account} onChange={(e) => setAccount(e.target.value)} fullWidth style={{ marginBottom: '10px' }} />
-      <Input placeholder="TOTP Secret" value={secret} onChange={(e) => setSecret(e.target.value)} fullWidth style={{ marginBottom: '10px' }} />
-      <Button variant="contained" color="primary" fullWidth onClick={handleAddToken}>Save TOTP Code</Button>
-      <div style={{ marginTop: '20px' }}>
-        <Typography variant="h6">Saved TOTP Tokens</Typography>
+    <Container maxWidth="md">
+      <AppBar position="static">
+        <Toolbar>
+          <Typography variant="h6" style={{ flexGrow: 1 }}>TrueMFA</Typography>
+          <Button color="inherit" onClick={handleSignOut}>Sign Out</Button>
+        </Toolbar>
+      </AppBar>
+
+      <Paper elevation={3} style={{ padding: "20px", marginTop: "20px", borderRadius: "12px" }}>
+        <Typography variant="h5" align="center" gutterBottom>Manage Your TOTP Tokens</Typography>
+
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <TextField label="Issuer (Website Name)" variant="outlined" fullWidth value={issuer} onChange={(e) => setIssuer(e.target.value)} />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField label="Account Name (Email/Username)" variant="outlined" fullWidth value={account} onChange={(e) => setAccount(e.target.value)} />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField label="TOTP Secret" variant="outlined" fullWidth value={secret} onChange={(e) => setSecret(e.target.value)} />
+          </Grid>
+          <Grid item xs={12}>
+            <Button variant="contained" color="primary" fullWidth onClick={handleAddToken}>Save TOTP Code</Button>
+          </Grid>
+        </Grid>
+      </Paper>
+
+      <Box mt={3}>
+        <Typography variant="h6" gutterBottom>Saved TOTP Tokens</Typography>
         <Typography variant="body2">Next refresh in: {timeLeft}s</Typography>
         {tokens.map((token) => (
-          <Card key={token.id} style={{ marginTop: '10px', padding: '10px' }}>
+          <Card key={token.id} elevation={2} style={{ marginTop: "10px", padding: "10px", borderRadius: "10px" }}>
             <CardContent>
               <Typography variant="subtitle1"><strong>Issuer:</strong> {token.issuer}</Typography>
               <Typography variant="subtitle1"><strong>Account:</strong> {token.account}</Typography>
@@ -129,7 +147,7 @@ export default function TrueMFA() {
             </CardContent>
           </Card>
         ))}
-      </div>
-    </div>
+      </Box>
+    </Container>
   );
 }
